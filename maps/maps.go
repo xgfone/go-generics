@@ -15,7 +15,24 @@
 // Package maps provides some convenient map generic functions.
 package maps
 
-import "github.com/xgfone/go-generics/set"
+import (
+	"github.com/xgfone/go-generics/set"
+	"golang.org/x/exp/constraints"
+)
+
+// Make returns a new map.
+//
+// If both cap and defaultCap are equal to 0, it is equal to make(M).
+// If cap is equal to 0, use defaultCap as cap instead, which is equal to
+// make(M, defaultCap).
+func Make[M ~map[K]V, K comparable, V any, I constraints.Integer](cap, defaultCap I) M {
+	if cap == 0 {
+		if cap = defaultCap; cap == 0 {
+			return make(M)
+		}
+	}
+	return make(M, cap)
+}
 
 // Add adds the key-value pair into the maps if the key does not exist.
 // Or, do nothing and return false.

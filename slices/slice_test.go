@@ -19,6 +19,23 @@ import (
 	"testing"
 )
 
+func TestMake(t *testing.T) {
+	ss := Make[[]string](0, 10, 0)
+	if _len := len(ss); _len != 0 {
+		t.Errorf("expect len %d, but got %d", 0, _len)
+	} else if _cap := cap(ss); _cap != 10 {
+		t.Errorf("expect cap %d, but got %d", 10, _cap)
+	}
+
+	type S []string
+	vs := Make[S](1, 0, uint(11))
+	if _len := len(vs); _len != 1 {
+		t.Errorf("expect len %d, but got %d", 1, _len)
+	} else if _cap := cap(vs); _cap != 11 {
+		t.Errorf("expect cap %d, but got %d", 11, _cap)
+	}
+}
+
 func TestMax(t *testing.T) {
 	if v := Max([]int{3, 2, 5, 4, 1}); v != 5 {
 		t.Errorf("expect 5, but got %v", v)

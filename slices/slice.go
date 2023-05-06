@@ -20,6 +20,20 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// Make returns a new slice.
+//
+// If both cap and defaultCap are equal to 0, it is equal to make(S, len).
+// If cap is equal to 0, use defaultCap as cap instead, which is equal to
+// make(S, len, defaultCap).
+func Make[S ~[]E, E any, I constraints.Integer](len, cap, defaultCap I) S {
+	if cap == 0 {
+		if cap = defaultCap; cap == 0 {
+			return make(S, len)
+		}
+	}
+	return make(S, len, cap)
+}
+
 // Max returns the maximum element of the slice.
 //
 // Return ZERO instead if the slice is empty.
