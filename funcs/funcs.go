@@ -75,3 +75,11 @@ func Min[T constraints.Ordered](left, right T) T {
 	}
 	return left
 }
+
+// Must returns value if err is nil. Or, panic with err.
+func Must[T any](value T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return value
+}

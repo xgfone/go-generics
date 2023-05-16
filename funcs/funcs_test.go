@@ -45,3 +45,15 @@ func TestMin(t *testing.T) {
 		t.Errorf("expect 1, but got %v", m)
 	}
 }
+
+func TestMust(t *testing.T) {
+	f1 := func() (int, error) { return 123, nil }
+	f2 := func() (string, error) { return "abc", nil }
+
+	if v := Must(f1()); v != 123 {
+		t.Errorf("expect %d, but got %d", 123, v)
+	}
+	if v := Must(f2()); v != "abc" {
+		t.Errorf("expect '%s', but got '%s'", "abc", v)
+	}
+}
