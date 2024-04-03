@@ -15,7 +15,7 @@
 // Package funcs provides some common generic functions.
 package funcs
 
-import "golang.org/x/exp/constraints"
+import "cmp"
 
 // Unwrap unwraps the inner value of v with ok==true if v has implemented
 // the interface { Unwrap() T } or { Get() T }.
@@ -49,7 +49,7 @@ func UnwrapAll[T any](v interface{}) T {
 //	 0 if left == right
 //	-1 if left <  right
 //	+1 if left >  right
-func Compare[T constraints.Ordered](left, right T) int {
+func Compare[T cmp.Ordered](left, right T) int {
 	switch {
 	case left < right:
 		return -1
@@ -58,22 +58,6 @@ func Compare[T constraints.Ordered](left, right T) int {
 	default:
 		return 1
 	}
-}
-
-// Max returns the maximum of left and right.
-func Max[T constraints.Ordered](left, right T) T {
-	if left < right {
-		return right
-	}
-	return left
-}
-
-// Min returns the minimum of left and right.
-func Min[T constraints.Ordered](left, right T) T {
-	if right < left {
-		return right
-	}
-	return left
 }
 
 // Must returns value if err is nil. Or, panic with err.

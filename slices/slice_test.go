@@ -16,43 +16,80 @@ package slices
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
 func TestMake(t *testing.T) {
-	ss := Make[[]string](0, 10, 0)
-	if _len := len(ss); _len != 0 {
+	if _cap := cap(Make[[]string](0, 0, 0)); _cap != 0 {
+		t.Errorf("expect cap %d, but got %d", 0, _cap)
+	}
+
+	if _cap := cap(Make[[]string](0, 0, 1)); _cap != 1 {
+		t.Errorf("expect cap %d, but got %d", 1, _cap)
+	}
+	if _len := len(Make[[]string](0, 0, 1)); _len != 0 {
 		t.Errorf("expect len %d, but got %d", 0, _len)
-	} else if _cap := cap(ss); _cap != 10 {
-		t.Errorf("expect cap %d, but got %d", 10, _cap)
 	}
 
-	type S []string
-	vs := Make[S](1, 0, uint(11))
-	if _len := len(vs); _len != 1 {
+	if _cap := cap(Make[[]string](1, 0, 0)); _cap != 1 {
+		t.Errorf("expect cap %d, but got %d", 1, _cap)
+	}
+	if _len := cap(Make[[]string](1, 0, 0)); _len != 1 {
 		t.Errorf("expect len %d, but got %d", 1, _len)
-	} else if _cap := cap(vs); _cap != 11 {
-		t.Errorf("expect cap %d, but got %d", 11, _cap)
 	}
 }
 
-func TestMax(t *testing.T) {
-	if v := Max([]int{3, 2, 5, 4, 1}); v != 5 {
-		t.Errorf("expect 5, but got %v", v)
+func TestMerge(t *testing.T) {
+	s1 := []int{1, 2}
+	s2 := []int{3, 4}
+
+	if v := Merge[[]int](); v != nil {
+		t.Errorf("expect a nil, but got %T", v)
+	}
+	if v := Merge[[]int](nil); v != nil {
+		t.Errorf("expect a nil, but got %T", v)
 	}
 
-	if v := Max([]int{}); v != 0 {
-		t.Errorf("expect 0, but got %v", v)
+	if v := Merge[[]int](nil, nil); v != nil {
+		t.Errorf("expect a nil, but got %T", v)
+	} else if cap := cap(v); cap != 0 {
+		t.Errorf("expect cap==%d, but got %d", 0, cap)
 	}
-}
-
-func TestMin(t *testing.T) {
-	if v := Min([]int{3, 2, 5, 4, 1}); v != 1 {
-		t.Errorf("expect 1, but got %v", v)
+	if v := Merge[[]int](nil, nil, nil); v != nil {
+		t.Errorf("expect a nil, but got %T", v)
+	} else if cap := cap(v); cap != 0 {
+		t.Errorf("expect cap==%d, but got %d", 0, cap)
+	}
+	if v := Merge[[]int](nil, nil, []int{}); v == nil {
+		t.Errorf("got unexpected nil")
+	} else if cap := cap(v); cap != 0 {
+		t.Errorf("expect cap==%d, but got %d", 0, cap)
 	}
 
-	if v := Min([]int{}); v != 0 {
-		t.Errorf("expect 0, but got %v", v)
+	if v := Merge[[]int](s1); !reflect.DeepEqual(s1, v) {
+		t.Errorf("expect %v, but got %v", s1, v)
+	}
+	if v := Merge[[]int](s1, nil); !reflect.DeepEqual(s1, v) {
+		t.Errorf("expect %v, but got %v", s1, v)
+	}
+	if v := Merge[[]int](nil, s1); !reflect.DeepEqual(s1, v) {
+		t.Errorf("expect %v, but got %v", s1, v)
+	}
+
+	expect := []int{1, 2, 3, 4}
+	if v := Merge[[]int](s1, s2); !reflect.DeepEqual(expect, v) {
+		t.Errorf("expect %v, but got %v", expect, v)
+	}
+
+	expect = []int{3, 4, 1, 2}
+	if v := Merge[[]int](s2, s1); !reflect.DeepEqual(expect, v) {
+		t.Errorf("expect %v, but got %v", expect, v)
+	}
+
+	expect = []int{3, 4, 1, 2, 5, 6}
+	if v := Merge[[]int](s2, s1, []int{5, 6}); !reflect.DeepEqual(expect, v) {
+		t.Errorf("expect %v, but got %v", expect, v)
 	}
 }
 
@@ -70,58 +107,6 @@ func ExampleConvert() {
 	// Output:
 	// [1 2 3]
 	// [4 5 6]
-}
-
-func ExampleMerge() {
-	type Slice1 []int64
-	type Slice2 []int
-
-	slice1 := []int64{1, 2}
-	slice2 := Slice2{1, 2}
-
-	slice1 = Merge(slice1, Slice2{3, 4}, func(v int) int64 { return int64(v) })
-	slice2 = Merge(slice2, Slice1{3, 4}, func(v int64) int { return int(v) })
-
-	fmt.Println(slice1)
-	fmt.Println(slice2)
-
-	// Output:
-	// [1 2 3 4]
-	// [1 2 3 4]
-}
-
-func ExampleIndex() {
-	ints1 := []int{2, 1, 3, 1, 4}
-	fmt.Println(Index(ints1, 0))
-	fmt.Println(Index(ints1, 1))
-
-	type Ints []int
-	ints2 := Ints{2, 1, 3, 1, 4}
-	fmt.Println(Index(ints2, 0))
-	fmt.Println(Index(ints2, 1))
-
-	// Output:
-	// -1
-	// 1
-	// -1
-	// 1
-}
-
-func ExampleLastIndex() {
-	ints1 := []int{2, 1, 3, 1, 4}
-	fmt.Println(LastIndex(ints1, 0))
-	fmt.Println(LastIndex(ints1, 1))
-
-	type Ints []int
-	ints2 := Ints{2, 1, 3, 1, 4}
-	fmt.Println(LastIndex(ints2, 0))
-	fmt.Println(LastIndex(ints2, 1))
-
-	// Output:
-	// -1
-	// 3
-	// -1
-	// 3
 }
 
 func ExampleSetEqual() {
@@ -145,54 +130,13 @@ func ExampleSetEqual() {
 	// [a b c] is not equal to [a b b]
 }
 
-func ExampleContains() {
-	fmt.Println(Contains([]int{1, 2, 3}, 0))
-	fmt.Println(Contains([]int{1, 2, 3}, 1))
-	fmt.Println(Contains([]int{1, 2, 3}, 2))
-	fmt.Println(Contains([]int{1, 2, 3}, 3))
-	fmt.Println(Contains([]int{1, 2, 3}, 4))
-
-	// Output:
-	// false
-	// true
-	// true
-	// true
-	// false
-}
-
-func ExampleReverse() {
-	vs1 := []string{"a", "b", "c", "d"}
-	Reverse(vs1)
-	fmt.Println(vs1)
-
-	vs2 := []int{1, 2, 3, 4}
-	Reverse(vs2)
-	fmt.Println(vs2)
-
-	// Output:
-	// [d c b a]
-	// [4 3 2 1]
-}
-
-func ExampleToMap() {
-	strmap := ToMap([]string{"a", "b", "c"})
-	intmap := ToMap([]int{1, 2, 3})
-
-	fmt.Println(strmap)
-	fmt.Println(intmap)
-
-	// Output:
-	// map[a:{} b:{} c:{}]
-	// map[1:{} 2:{} 3:{}]
-}
-
-func ExampleToInterfaces() {
+func ExampleInterfaces() {
 	ss := []string{"a", "b", "c"}
-	vs1 := ToInterfaces(ss)
+	vs1 := Interfaces(ss)
 	fmt.Printf("%T: %v\n", vs1, vs1)
 
 	ints := []int{1, 2, 3}
-	vs2 := ToInterfaces(ints)
+	vs2 := Interfaces(ints)
 	fmt.Printf("%T: %v\n", vs2, vs2)
 
 	// Output:

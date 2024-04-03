@@ -15,69 +15,24 @@
 // Package slices provides some convenient slice generic functions.
 package slices
 
-import (
-	"github.com/xgfone/go-generics/set"
-	"golang.org/x/exp/constraints"
-)
+import "slices"
 
 // Make returns a new slice.
 //
 // If both cap and defaultCap are equal to 0, it is equal to make(S, len).
 // If cap is equal to 0, use defaultCap as cap instead, which is equal to
 // make(S, len, defaultCap).
-func Make[S ~[]E, E any, I constraints.Integer](len, cap, defaultCap I) S {
+func Make[S ~[]E, E any, I ~int | ~int64](len, cap, defaultCap I) S {
 	if cap == 0 {
 		if cap = defaultCap; cap == 0 {
 			return make(S, len)
 		}
 	}
+
+	if cap < len {
+		panic("slice.Make: the cap is less than len")
+	}
 	return make(S, len, cap)
-}
-
-// Max returns the maximum element of the slice.
-//
-// Return ZERO instead if the slice is empty.
-func Max[S ~[]E, E constraints.Ordered](vs S) E {
-	switch _len := len(vs); _len {
-	case 0:
-		var v E
-		return v
-
-	case 1:
-		return vs[0]
-
-	default:
-		v := vs[0]
-		for i := 1; i < _len; i++ {
-			if v < vs[i] {
-				v = vs[i]
-			}
-		}
-		return v
-	}
-}
-
-// Min returns the minimum element of the slice.
-//
-// Return ZERO instead if the slice is empty.
-func Min[S ~[]E, E constraints.Ordered](vs S) E {
-	switch _len := len(vs); _len {
-	case 0:
-		var v E
-		return v
-
-	case 1:
-		return vs[0]
-
-	default:
-		v := vs[0]
-		for i := 1; i < _len; i++ {
-			if v > vs[i] {
-				v = vs[i]
-			}
-		}
-		return v
-	}
 }
 
 // Convert converts the slice from []E1 to []E2.
@@ -89,71 +44,66 @@ func Convert[S1 ~[]E1, E1, E2 any](vs S1, convert func(E1) E2) []E2 {
 	return newslice
 }
 
-// Clone clones the slice and returns the new.
+// Interfaces converts []any to []interface{}.
+func Interfaces[S ~[]E, E any](vs S) []interface{} {
+	is := make([]interface{}, len(vs))
+	for i, _len := 0, len(vs); i < _len; i++ {
+		is[i] = vs[i]
+	}
+	return is
+}
+
+// Merge merges a set of slices in turn to one slice.
 //
-// NOTICE: it is a shallow clone.
-func Clone[S ~[]E, E any](slice S) S {
-	if slice == nil {
+// If no arguments, return nil.
+// If all the arguments are empty, return a empty slice with cap==0.
+func Merge[S ~[]E, E any](ss ...S) S {
+	switch _len := len(ss); _len {
+	case 0:
 		return nil
-	}
 
-	newslice := make(S, len(slice))
-	copy(newslice, slice)
-	return newslice
-}
+	case 1:
+		return ss[0]
 
-// Merge merges the slice from src into dst and returns the new dst.
-func Merge[S1 ~[]E1, S2 ~[]E2, E1, E2 any](dst S1, src S2, convert func(E2) E1) S1 {
-	for _, e := range src {
-		dst = append(dst, convert(e))
-	}
-	return dst
-}
+	case 2:
+		len1, len2 := len(ss[0]), len(ss[1])
+		switch {
+		case len1 == 0:
+			return ss[1]
 
-// Index returns the first index where v is in vs, or -1.
-func Index[S ~[]E, E comparable](vs S, v E) int {
-	for i, e := range vs {
-		if e == v {
-			return i
+		case len2 == 0:
+			return ss[0]
+
+		default:
+			vs := make(S, len1+len2)
+			copy(vs, ss[0])
+			copy(vs[len1:], ss[1])
+			return vs
 		}
-	}
-	return -1
-}
 
-// LastIndex returns the last index where v is in vs, or -1.
-func LastIndex[S ~[]E, E comparable](vs S, v E) int {
-	for _len := len(vs) - 1; _len >= 0; _len-- {
-		if vs[_len] == v {
-			return _len
+	default:
+		var tlen int
+		var nonil bool
+		for i := 0; i < _len; i++ {
+			if ss[i] != nil {
+				nonil = true
+				tlen += len(ss[i])
+			}
 		}
-	}
-	return -1
-}
 
-// LastIndexFunc returns the last index i satisfying equal(vs[i]), or -1.
-func LastIndexFunc[S ~[]E, E any](vs S, equal func(E) bool) int {
-	for _len := len(vs) - 1; _len >= 0; _len-- {
-		if equal(vs[_len]) {
-			return _len
+		if !nonil {
+			return nil
 		}
-	}
-	return -1
-}
-
-// Equal reports whether the element and order of the two slices are equal.
-func Equal[S ~[]E, E comparable](vs1, vs2 S) bool {
-	len1 := len(vs1)
-	if len1 != len(vs2) {
-		return false
-	}
-
-	for i := 0; i < len1; i++ {
-		if vs1[i] != vs2[i] {
-			return false
+		if tlen == 0 {
+			return S{}
 		}
-	}
 
-	return true
+		vs := make(S, 0, tlen)
+		for i := 0; i < _len; i++ {
+			vs = append(vs, ss[i]...)
+		}
+		return vs
+	}
 }
 
 // SetEqual reports whether the element set of the two slices are equal.
@@ -164,69 +114,10 @@ func SetEqual[S ~[]E, E comparable](vs1, vs2 S) bool {
 	}
 
 	for i := 0; i < len1; i++ {
-		if !Contains(vs1, vs2[i]) || !Contains(vs2, vs1[i]) {
+		if !slices.Contains(vs1, vs2[i]) || !slices.Contains(vs2, vs1[i]) {
 			return false
 		}
 	}
 
 	return true
-}
-
-// Contains reports whether the slice vs contains the value v.
-func Contains[S ~[]E, E comparable](vs S, v E) bool {
-	for i, _len := 0, len(vs); i < _len; i++ {
-		if vs[i] == v {
-			return true
-		}
-	}
-	return false
-}
-
-// Reverse reverses the elements in the slice.
-func Reverse[S ~[]E, E any](vs S) {
-	_len := len(vs) - 1
-	if _len <= 0 {
-		return
-	}
-
-	for i, j := 0, _len/2; i <= j; i++ {
-		k := _len - i
-		vs[i], vs[k] = vs[k], vs[i]
-	}
-}
-
-// ToMap converts the slice to a map that the slice element is the key of map.
-func ToMap[S ~[]E, E comparable](vs S) map[E]struct{} {
-	maps := make(map[E]struct{})
-	for i, _len := 0, len(vs); i < _len; i++ {
-		maps[vs[i]] = struct{}{}
-	}
-	return maps
-}
-
-// ToInterfaces converts []any to []interface{}.
-func ToInterfaces[S ~[]E, E any](vs S) []interface{} {
-	is := make([]interface{}, len(vs))
-	for i, _len := 0, len(vs); i < _len; i++ {
-		is[i] = vs[i]
-	}
-	return is
-}
-
-// ToSet converts a slice to set.
-func ToSet[S1 ~[]E, E comparable](vs S1) set.Set[E] {
-	newset := set.NewSetWithCap[E](len(vs))
-	for _, e := range vs {
-		newset.Add(e)
-	}
-	return newset
-}
-
-// MapToSet converts a slice to set by the map function.
-func MapToSet[S1 ~[]E1, E1 any, E2 comparable](vs S1, mapf func(E1) E2) set.Set[E2] {
-	newset := set.NewSetWithCap[E2](len(vs))
-	for _, e := range vs {
-		newset.Add(mapf(e))
-	}
-	return newset
 }

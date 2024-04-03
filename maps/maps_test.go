@@ -14,7 +14,12 @@
 
 package maps
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"testing"
+)
 
 func ExampleConvert() {
 	type Maps map[string]int
@@ -24,31 +29,6 @@ func ExampleConvert() {
 
 	int64map1 := Convert(intmap1, func(k string, v int) (string, int64) { return k, int64(v) })
 	int64map2 := Convert(intmap2, func(k string, v int) (string, int64) { return k, int64(v) })
-
-	fmt.Printf("%T\n", int64map1)
-	fmt.Printf("%T\n", int64map2)
-	fmt.Printf("%s=%v\n", "a", int64map1["a"])
-	fmt.Printf("%s=%v\n", "b", int64map1["b"])
-	fmt.Printf("%s=%v\n", "a", int64map2["a"])
-	fmt.Printf("%s=%v\n", "b", int64map2["b"])
-
-	// Output:
-	// map[string]int64
-	// map[string]int64
-	// a=1
-	// b=2
-	// a=3
-	// b=4
-}
-
-func ExampleConvertValues() {
-	type Maps map[string]int
-
-	intmap1 := Maps{"a": 1, "b": 2}
-	intmap2 := map[string]int{"a": 3, "b": 4}
-
-	int64map1 := ConvertValues(intmap1, func(v int) int64 { return int64(v) })
-	int64map2 := ConvertValues(intmap2, func(v int) int64 { return int64(v) })
 
 	fmt.Printf("%T\n", int64map1)
 	fmt.Printf("%T\n", int64map2)
@@ -87,27 +67,6 @@ func ExampleAddSlice() {
 	// b=98
 }
 
-func ExampleAddSliceAsValue() {
-	type Map map[string]int
-	type Slice []int
-
-	maps1 := Map{"a": 1}
-	maps2 := map[string]int{"a": 1}
-	AddSliceAsValue(maps1, []int{2}, func(v int) string { return "b" })
-	AddSliceAsValue(maps2, Slice{2}, func(v int) string { return "b" })
-
-	fmt.Printf("%s=%v\n", "a", maps1["a"])
-	fmt.Printf("%s=%v\n", "b", maps1["b"])
-	fmt.Printf("%s=%v\n", "a", maps2["a"])
-	fmt.Printf("%s=%v\n", "b", maps2["b"])
-
-	// Output:
-	// a=1
-	// b=2
-	// a=1
-	// b=2
-}
-
 func ExampleDeleteSlice() {
 	type Map map[string]int
 	type Slice []string
@@ -140,4 +99,121 @@ func ExampleDeleteSliceFunc() {
 	// Output:
 	// map[c:3]
 	// map[c:3]
+}
+
+func TestKeys(t *testing.T) {
+	expectints := []int{1, 2}
+	intmap := map[int]int{1: 11, 2: 22}
+	ints := Keys(intmap)
+	sort.Ints(ints)
+	if !slices.Equal(expectints, ints) {
+		t.Errorf("expect %v, but got %v", expectints, ints)
+	}
+
+	expectstrs := []string{"a", "b"}
+	strmap := map[string]string{"a": "aa", "b": "bb"}
+	strs := Keys(strmap)
+	sort.Strings(strs)
+	if !slices.Equal(expectstrs, strs) {
+		t.Errorf("expect %v, but got %v", expectstrs, strs)
+	}
+}
+
+func TestValues(t *testing.T) {
+	expectints := []int{11, 22}
+	intmap := map[int]int{1: 11, 2: 22}
+	ints := Values(intmap)
+	sort.Ints(ints)
+	if !slices.Equal(expectints, ints) {
+		t.Errorf("expect %v, but got %v", expectints, ints)
+	}
+
+	expectstrs := []string{"aa", "bb"}
+	strmap := map[string]string{"a": "aa", "b": "bb"}
+	strs := Values(strmap)
+	sort.Strings(strs)
+	if !slices.Equal(expectstrs, strs) {
+		t.Errorf("expect %v, but got %v", expectstrs, strs)
+	}
+}
+
+func ExampleKeysFunc() {
+	type Key struct {
+		K string
+		V int32
+	}
+	maps := map[Key]bool{
+		{K: "a", V: 1}: true,
+		{K: "b", V: 2}: true,
+		{K: "c", V: 3}: true,
+	}
+
+	keys := KeysFunc(maps, func(k Key) string { return k.K })
+	slices.Sort(keys)
+	fmt.Println(keys)
+
+	// Output:
+	// [a b c]
+}
+
+func ExampleValuesFunc() {
+	type Value struct {
+		V int
+	}
+	maps := map[string]Value{
+		"a": {V: 1},
+		"b": {V: 2},
+		"c": {V: 3},
+	}
+
+	values := ValuesFunc(maps, func(v Value) int { return v.V })
+	slices.Sort(values)
+	fmt.Println(values)
+
+	// Output:
+	// [1 2 3]
+}
+
+func ExampleSetMap() {
+	setmap := SetMap([]string{"a", "b", "c"})
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:{} b:{} c:{}]
+}
+
+func ExampleBoolMap() {
+	boolmap := BoolMap([]string{"a", "b", "c"})
+	fmt.Println(boolmap)
+
+	// Output:
+	// map[a:true b:true c:true]
+}
+
+func ExampleSetMapFunc() {
+	type S struct {
+		K string
+		V int32
+	}
+
+	values := []S{{K: "a", V: 1}, {K: "b", V: 2}, {K: "c", V: 3}}
+	setmap := SetMapFunc(values, func(s S) string { return s.K })
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:{} b:{} c:{}]
+}
+
+func ExampleBoolMapFunc() {
+	type S struct {
+		K string
+		V int32
+	}
+
+	values := []S{{K: "a", V: 1}, {K: "b", V: 2}, {K: "c", V: 3}}
+	setmap := BoolMapFunc(values, func(s S) string { return s.K })
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:true b:true c:true]
 }

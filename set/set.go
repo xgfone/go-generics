@@ -25,6 +25,11 @@ type Set[T comparable] struct {
 	cache map[T]struct{}
 }
 
+// New is the short for NewSet.
+func New[T comparable](elements ...T) Set[T] {
+	return NewSet(elements...)
+}
+
 // NewSet returns a new Set from a slice.
 func NewSet[T comparable](elements ...T) Set[T] {
 	s := Set[T]{cache: make(map[T]struct{}, len(elements))}
@@ -165,7 +170,7 @@ func (s Set[T]) DifferenceUpdate(others ...Set[T]) {
 }
 
 // IntersectionUpdate updates the set, keeping only elements found in it and all others.
-func (s Set[T]) IntersectionUpdate(others ...Set[T]) {
+func (s *Set[T]) IntersectionUpdate(others ...Set[T]) {
 	cache := make(map[T]struct{})
 	for e := range s.cache {
 		var no bool
@@ -184,7 +189,7 @@ func (s Set[T]) IntersectionUpdate(others ...Set[T]) {
 
 // SymmetricDifferenceUpdate updates the set, keeping only elements
 // found in either set, but not in both.
-func (s Set[T]) SymmetricDifferenceUpdate(other Set[T]) {
+func (s *Set[T]) SymmetricDifferenceUpdate(other Set[T]) {
 	cache := make(map[T]struct{})
 
 	for e := range other.cache {

@@ -28,24 +28,6 @@ func TestCompare(t *testing.T) {
 	}
 }
 
-func TestMax(t *testing.T) {
-	if m := Max(1, 2); m != 2 {
-		t.Errorf("expect 2, but got %v", m)
-	}
-	if m := Max(2, 1); m != 2 {
-		t.Errorf("expect 2, but got %v", m)
-	}
-}
-
-func TestMin(t *testing.T) {
-	if m := Min(1, 2); m != 1 {
-		t.Errorf("expect 1, but got %v", m)
-	}
-	if m := Min(2, 1); m != 1 {
-		t.Errorf("expect 1, but got %v", m)
-	}
-}
-
 func TestMust(t *testing.T) {
 	f1 := func() (int, error) { return 123, nil }
 	f2 := func() (string, error) { return "abc", nil }

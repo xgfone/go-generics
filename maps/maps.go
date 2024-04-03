@@ -15,28 +15,9 @@
 // Package maps provides some convenient map generic functions.
 package maps
 
-import (
-	"github.com/xgfone/go-generics/set"
-	"golang.org/x/exp/constraints"
-)
-
-// Make returns a new map.
-//
-// If both cap and defaultCap are equal to 0, it is equal to make(M).
-// If cap is equal to 0, use defaultCap as cap instead, which is equal to
-// make(M, defaultCap).
-func Make[M ~map[K]V, K comparable, V any, I constraints.Integer](cap, defaultCap I) M {
-	if cap == 0 {
-		if cap = defaultCap; cap == 0 {
-			return make(M)
-		}
-	}
-	return make(M, cap)
-}
-
-// Add adds the key-value pair into the maps if the key does not exist.
-// Or, do nothing and return false.
-func Add[M ~map[K]V, K comparable, V any](maps M, k K, v V) (ok bool) {
+// TryAdd tries to add the key-value pair into the maps
+// if the key does not exist. Or, do nothing and return false.
+func TryAdd[M ~map[K]V, K comparable, V any](maps M, k K, v V) (ok bool) {
 	_, exist := maps[k]
 	if ok = !exist; ok {
 		maps[k] = v
@@ -50,14 +31,6 @@ func AddSlice[M ~map[K]V, S ~[]E, K comparable, V, E any](maps M, slices S, conv
 	for _, value := range slices {
 		k, v := convert(value)
 		maps[k] = v
-	}
-}
-
-// AddSliceAsValue adds each element of the slices as the value into maps,
-// which gets the key by the fucntion getkey.
-func AddSliceAsValue[M ~map[K]V, S ~[]V, K comparable, V any](maps M, slices S, getkey func(V) K) {
-	for _, v := range slices {
-		maps[getkey(v)] = v
 	}
 }
 
@@ -92,6 +65,54 @@ func DeleteSliceFunc[M ~map[K1]V, S ~[]K2, K1, K2 comparable, V any](maps M, key
 	}
 }
 
+// Convert converts the map from map[K1]V1 to map[K1]V2.
+func Convert[M ~map[K1]V1, K1, K2 comparable, V1, V2 any](maps M, convert func(K1, V1) (K2, V2)) map[K2]V2 {
+	if maps == nil {
+		return nil
+	}
+
+	newmap := make(map[K2]V2, len(maps))
+	for k1, v1 := range maps {
+		k2, v2 := convert(k1, v1)
+		newmap[k2] = v2
+	}
+	return newmap
+}
+
+func FromSliceWithIndex[S ~[]E, K comparable, V, E any](s S, convert func(int, E) (K, V)) map[K]V {
+	_len := len(s)
+	maps := make(map[K]V, _len)
+	for i := 0; i < _len; i++ {
+		k, v := convert(i, s[i])
+		maps[k] = v
+	}
+	return maps
+}
+
+func FromSlice[S ~[]E, K comparable, V, E any](s S, convert func(E) (K, V)) map[K]V {
+	return FromSliceWithIndex(s, func(_ int, e E) (K, V) { return convert(e) })
+}
+
+// SetMap converts a slice s to a set map.
+func SetMap[S ~[]T, T comparable](s S) map[T]struct{} {
+	return FromSlice(s, func(e T) (T, struct{}) { return e, struct{}{} })
+}
+
+// BoolMap converts a slice s to a bool map.
+func BoolMap[S ~[]T, T comparable](s S) map[T]bool {
+	return FromSlice(s, func(e T) (T, bool) { return e, true })
+}
+
+// SetMapFunc converts a slice s to a set map by a conversion function.
+func SetMapFunc[S ~[]T, K comparable, T any](s S, convert func(T) K) map[K]struct{} {
+	return FromSlice(s, func(e T) (K, struct{}) { return convert(e), struct{}{} })
+}
+
+// BoolMapFunc converts a slice s to a bool map by a conversion function.
+func BoolMapFunc[S ~[]T, K comparable, T any](s S, convert func(T) K) map[K]bool {
+	return FromSlice(s, func(e T) (K, bool) { return convert(e), true })
+}
+
 // Values returns all the values of the map.
 func Values[M ~map[K]V, K comparable, V any](maps M) []V {
 	values := make([]V, 0, len(maps))
@@ -110,51 +131,20 @@ func Keys[M ~map[K]V, K comparable, V any](maps M) []K {
 	return keys
 }
 
-// Clone clones the map and returns the new.
-func Clone[M ~map[K]V, K comparable, V any](maps M) M {
-	if maps == nil {
-		return nil
-	}
-
-	newmap := make(M, len(maps))
-	for k, v := range maps {
-		newmap[k] = v
-	}
-	return newmap
-}
-
-// Convert converts the map from map[K1]V1 to map[K1]V2.
-func Convert[M ~map[K1]V1, K1, K2 comparable, V1, V2 any](maps M, convert func(K1, V1) (K2, V2)) map[K2]V2 {
-	if maps == nil {
-		return nil
-	}
-
-	newmap := make(map[K2]V2, len(maps))
-	for k1, v1 := range maps {
-		k2, v2 := convert(k1, v1)
-		newmap[k2] = v2
-	}
-	return newmap
-}
-
-// ConvertValues clones the map, converts the value from V1 to V2, and returns the new.
-func ConvertValues[M ~map[K]V1, K comparable, V1, V2 any](maps M, convert func(V1) V2) map[K]V2 {
-	if maps == nil {
-		return nil
-	}
-
-	newmap := make(map[K]V2, len(maps))
-	for k, v := range maps {
-		newmap[k] = convert(v)
-	}
-	return newmap
-}
-
-// KeysToSet collects all the keys and converts them to a set.
-func KeysToSet[M ~map[K]V, K comparable, V any](maps M) set.Set[K] {
-	kset := set.NewSetWithCap[K](len(maps))
+// KeysFunc returns all the keys of the map by the conversion function.
+func KeysFunc[M ~map[K]V, T any, K comparable, V any](maps M, convert func(K) T) []T {
+	keys := make([]T, 0, len(maps))
 	for k := range maps {
-		kset.Add(k)
+		keys = append(keys, convert(k))
 	}
-	return kset
+	return keys
+}
+
+// Values returns all the values of the map by the conversion function.
+func ValuesFunc[M ~map[K]V, T any, K comparable, V any](maps M, convert func(V) T) []T {
+	values := make([]T, 0, len(maps))
+	for _, v := range maps {
+		values = append(values, convert(v))
+	}
+	return values
 }
