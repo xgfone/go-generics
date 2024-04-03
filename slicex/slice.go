@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package slices provides some convenient slice generic functions.
-package slices
+// Package slicex provides some extra slice generic functions.
+package slicex
 
 import "slices"
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package maps provides some convenient map generic functions.
-package maps
+// Package mapx provides some extra map generic functions.
+package mapx
 
 // TryAdd tries to add the key-value pair into the maps
 // if the key does not exist. Or, do nothing and return false.
